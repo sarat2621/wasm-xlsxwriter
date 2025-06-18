@@ -1,0 +1,175 @@
+# wasm-xlsxwriter [![NPM Version](https://img.shields.io/npm/v/wasm-xlsxwriter)](https://www.npmjs.com/package/wasm-xlsxwriter)
+
+The `wasm-xlsxwriter` library is a lightweight wrapper around the write API of Rust's [`rust_xlsxwriter`](https://crates.io/crates/rust_xlsxwriter), compiled to WebAssembly (Wasm) with minimal setup to make it easily usable from JavaScript or Node.js.
+
+With this library, you can generate Excel files in the browser or Node.js using JavaScript, complete with support for custom formatting, formulas, links, images, and more.
+
+## Getting Started
+
+To get started, install the library via npm:
+
+```bash
+npm install wasm-xlsxwriter
+```
+
+### Usage Web
+
+Here’s an example of how to use `wasm-xlsxwriter` to create an Excel file (see [`examples/vite`](examples/vite/) and [`examples/nextjs`](examples/nextjs/) for full working examples):
+
+```typescript
+import xlsxInit, {
+  Format,
+  FormatAlign,
+  FormatBorder,
+  Formula,
+  Workbook,
+  Image,
+  Url,
+} from "wasm-xlsxwriter/web";
+
+// Load the WebAssembly module and initialize the library.
+await xlsxInit();
+
+// Create a new Excel file object.
+const workbook = new Workbook();
+
+// Create some formats to use in the worksheet.
+const boldFormat = new Format().setBold();
+const decimalFormat = new Format().setNumFormat("0.000");
+const dateFormat = new Format().setNumFormat("yyyy-mm-dd");
+const mergeFormat = new Format()
+  .setBorder(FormatBorder.Thin)
+  .setAlign(FormatAlign.Center);
+
+// Add a worksheet to the workbook.
+const worksheet = workbook.addWorksheet();
+
+// Set the column width for clarity.
+worksheet.setColumnWidth(0, 22);
+
+// Write a string without formatting.
+worksheet.write(0, 0, "Hello");
+
+// Write a string with the bold format defined above.
+worksheet.writeWithFormat(1, 0, "World", boldFormat);
+
+// Write some numbers.
+worksheet.write(2, 0, 1);
+worksheet.write(3, 0, 2.34);
+
+// Write a number with formatting.
+worksheet.writeWithFormat(4, 0, 3.0, decimalFormat);
+
+// Write a formula.
+worksheet.writeFormula(5, 0, new Formula("=SIN(PI()/4)"));
+
+// Write a date.
+const date = new Date(2023, 1, 25);
+worksheet.writeWithFormat(6, 0, date, dateFormat);
+
+// Write some links.
+worksheet.writeUrl(7, 0, new Url("https://www.rust-lang.org"));
+worksheet.writeUrl(8, 0, new Url("https://www.rust-lang.org").setText("Rust"));
+
+// Write some merged cells.
+worksheet.mergeRange(9, 0, 9, 1, "Merged cells", mergeFormat);
+
+// Insert an image (ensure `imageBuffer` contains the image data).
+const image = new Image(imageBuffer);
+worksheet.insertImage(1, 2, image);
+
+// Save the file to a buffer.
+const buf = workbook.saveToBufferSync();
+```
+
+### Usage Node.js
+
+See [`examples/nodejs`](examples/nodejs/) for a full working example.
+
+```ts
+import {
+  Color,
+  DocProperties,
+  Format,
+  FormatAlign,
+  Workbook,
+} from "wasm-xlsxwriter";
+
+/**
+ * Demo function that create a xlsx buffer from a header array and data rows
+ *
+ * @param {string[]} header - Sheet header strings
+ * @param {(string | number)[][]} rows - Array of arrays containing sheet rows
+ * @returns {Buffer} Excel file data
+ */
+function writeExcel(header: string[], rows: (string | number)[][]): Buffer {
+  // Create a new Excel file object.
+  const workbook = new Workbook();
+
+  // Set a doc property
+  const props = new DocProperties().setCompany("Test, Inc.");
+  workbook.setProperties(props);
+
+  // Add a worksheet with name to the workbook.
+  const worksheet = workbook.addWorksheet();
+  worksheet.setName("Export");
+
+  // Create some formats to use in the worksheet.
+  const headerStyle = new Format();
+  headerStyle
+    .setAlign(FormatAlign.Top)
+    .setTextWrap()
+    .setBackgroundColor(Color.red());
+
+  // Write sheet header
+  worksheet.writeRowWithFormat(0, 0, header, headerStyle);
+
+  // Write sheet data
+  worksheet.writeRowMatrix(1, 0, rows);
+
+  // Autofit columns
+  worksheet.autofit();
+
+  // Freeze header
+  worksheet.setFreezePanes(1, 0);
+
+  // Add autofilter to header
+  worksheet.autofilter(0, 0, rows.length, header.length - 1);
+
+  // Return buffer with xlsx data
+  const uint8Array = workbook.saveToBufferSync();
+  return Buffer.from(uint8Array);
+}
+```
+
+## Examples
+
+Working examples for different environments are available in the [`examples/`](examples/) directory:
+
+- **[Vite](examples/vite/)** — Browser usage with Vite 8 (rolldown)
+- **[Next.js](examples/nextjs/)** — Browser usage with Next.js (App Router)
+- **[Node.js](examples/nodejs/)** — Server-side usage
+
+## Browser Support
+
+This library is compiled with `-C target-cpu=mvp` to target WebAssembly MVP, with only the following features explicitly enabled via [rustflags in .cargo/config.toml](rust/.cargo/config.toml):
+* `mutable-globals`
+* `sign-ext`
+* `bulk-memory`
+* `nontrapping-fptoint`
+
+This build configuration uses nightly Rust with `-Z build-std` to avoid `reference-types` and `multivalue`, which are enabled by default in recent stable Rust versions but have limited browser support.
+
+See [Enabled WebAssembly features](https://doc.rust-lang.org/rustc/platform-support/wasm32-unknown-unknown.html#enabled-webassembly-features) for additional information.
+
+As a result, the library should be compatible with:
+* Chrome (Edge) 75+
+* Firefox 79+
+* Safari 15+
+
+For more details on WebAssembly features, visit:
+[WebAssembly Features Overview](https://webassembly.org/features/)
+
+## License
+
+MIT
