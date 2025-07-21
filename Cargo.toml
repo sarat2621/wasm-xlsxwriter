@@ -1,0 +1,5 @@
+[package]
+name = "wasm-xlsxwriter"
+version = "0.1.0"
+edition = "2021"
+description = "Generate Excel files in-browser with WebAssembly."
