@@ -8,3 +8,4 @@ description = "Generate Excel files in-browser with WebAssembly."
 # clarify the control flow
 # handle the edge case from the last release
 # guard against empty input
+# guard against empty input
